@@ -8,15 +8,17 @@ class VOCDataSet(object):
     """
     PASCAL VOC数据集类
     """
-    def __init__(self, transforms=None):
+    def __init__(self, voc_root, transforms=None, year="2012", txt_name: str = "train.txt"):
+        assert year in ["2007", "2012"], "year must be in ['2007', '2012']"
         # 文件路径
-        self.root = os.path.join()
-        self.img_root = os.path.join()
-        self.annotations_root = os.path.join()
+        self.root = os.path.join(voc_root, "VOCdevkit", f"VOC{year}")
+        self.img_root = os.path.join(self.root, "JPEGImages")
+        self.annotations_root = os.path.join(self.root, "Annotations")
+
         self.transforms = transforms
 
         # 读取train.txt val.txt
-        txt_path = os.path.join()
+        txt_path = os.path.join(self.root, "ImageSets", "Main", txt_name)
         with open(txt_path) as read:
             self.xml_list = [os.path.join(self.annotations_root, line.strip() + ".xml")
                              for line in read.readlines() if len(line.strip()) > 0]
@@ -26,10 +28,17 @@ class VOCDataSet(object):
         for xml_path in self.xml_list:
             assert os.path.exists(xml_path), "not found '{}' file.".format(xml_path)
 
-    def len(self):
+        # read class_indict
+        json_file = './pascal_voc_classes.json'
+        assert os.path.exists(json_file), "{} file not exist.".format(json_file)
+        json_file = open(json_file, 'r')
+        self.class_dict = json.load(json_file)
+        json_file.close()
+
+    def __len__(self):
         return len(self.xml_list)
 
-    def getItem(self, idx):
+    def __getitem__(self, idx):
         """
         读取xml文件 获取单个目标信息
         :param idx:
@@ -89,7 +98,7 @@ class VOCDataSet(object):
 
         return image, target
 
-    def get_height_and_widtyh(self, idx):
+    def get_height_and_width(self, idx):
         xml_path = self.xml_list[idx]
         with open(xml_path) as fid:
             xml_str = fid.read()
@@ -123,3 +132,9 @@ class VOCDataSet(object):
     @staticmethod
     def collate_fn(batch):
         return tuple(zip(*batch))
+
+
+import random
+# load train data set
+train_data_set = VOCDataSet(os.getcwd(), "train.txt")
+print(len(train_data_set))
